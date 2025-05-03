@@ -13,6 +13,16 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 
+// Admin imports
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminProducts from "./pages/admin/Products";
+import AdminCategories from "./pages/admin/Categories";
+import AdminOrders from "./pages/admin/Orders";
+import AdminCustomers from "./pages/admin/Customers";
+import AdminProductForm from "./pages/admin/ProductForm";
+import AdminCategoryForm from "./pages/admin/CategoryForm";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -37,6 +47,19 @@ const App = () => (
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
             <Route path="*" element={<NotFound />} />
+          </Route>
+          
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="products" element={<AdminProducts />} />
+            <Route path="products/new" element={<AdminProductForm />} />
+            <Route path="products/:id" element={<AdminProductForm />} />
+            <Route path="categories" element={<AdminCategories />} />
+            <Route path="categories/new" element={<AdminCategoryForm />} />
+            <Route path="categories/:id" element={<AdminCategoryForm />} />
+            <Route path="orders" element={<AdminOrders />} />
+            <Route path="customers" element={<AdminCustomers />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -1,274 +1,348 @@
 
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { AuthContext } from "@/components/layout/Layout";
+import { 
+  Table, 
+  TableBody, 
+  TableCaption, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, Trash2, ArrowRight } from "lucide-react";
-import { toast } from "sonner";
-
-interface CartItem {
-  id: string;
-  productId: string;
-  name: string;
-  price: number;
-  image: string;
-  quantity: number;
-  category: string;
-  duration: string;
-  discount?: number;
-}
-
-// Demo cart data - would be stored in context or state management in a real app
-const demoCartItems: CartItem[] = [
-  {
-    id: "cart1",
-    productId: "tc2",
-    name: "Teleconect Premium",
-    price: 100000,
-    image: "/placeholder.svg",
-    quantity: 1,
-    category: "Teleconect",
-    duration: "30 Days"
-  },
-  {
-    id: "cart2",
-    productId: "nf3",
-    name: "Netfusion Family",
-    price: 200000,
-    image: "/placeholder.svg",
-    quantity: 2,
-    category: "Netfusion",
-    duration: "30 Days",
-    discount: 15
-  }
-];
+import { Trash2 } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import PaymentForm from "@/components/checkout/PaymentForm";
+import { useMutation } from "@tanstack/react-query";
 
 const Cart = () => {
   const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [promoCode, setPromoCode] = useState("");
+  const { user } = useContext(AuthContext);
+  const [cart, setCart] = useState<any[]>([]);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   useEffect(() => {
-    // Simulate loading cart data
-    const timer = setTimeout(() => {
-      setCartItems(demoCartItems);
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    // Initialize cart from localStorage
+    const savedCart = localStorage.getItem("cart");
+    if (savedCart) {
+      try {
+        setCart(JSON.parse(savedCart));
+      } catch (e) {
+        console.error("Error parsing cart data:", e);
+        setCart([]);
+      }
+    }
   }, []);
 
-  const updateQuantity = (id: string, newQuantity: number) => {
-    if (newQuantity < 1) return;
+  const updateCart = (newCart: any[]) => {
+    setCart(newCart);
+    localStorage.setItem("cart", JSON.stringify(newCart));
+  };
+
+  const updateQuantity = (productId: string, quantity: number) => {
+    if (quantity < 1) return;
     
-    setCartItems(items => 
-      items.map(item => 
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
+    const newCart = cart.map((item) => 
+      item.id === productId ? { ...item, quantity } : item
     );
+    
+    updateCart(newCart);
   };
 
-  const removeItem = (id: string) => {
-    setCartItems(items => items.filter(item => item.id !== id));
-    toast.success("Item removed from cart");
+  const removeItem = (productId: string) => {
+    const newCart = cart.filter((item) => item.id !== productId);
+    updateCart(newCart);
+    
+    toast({
+      title: "Item removed",
+      description: "The item has been removed from your cart.",
+    });
   };
 
-  const applyPromoCode = () => {
-    if (!promoCode.trim()) {
-      toast.error("Please enter a promo code");
-      return;
+  const calculateTotal = () => {
+    return cart.reduce((sum, item) => {
+      const price = item.discount 
+        ? item.price * (1 - item.discount / 100) 
+        : item.price;
+      return sum + (price * item.quantity);
+    }, 0);
+  };
+
+  const createOrderMutation = useMutation({
+    mutationFn: async ({ paymentId }: { paymentId: string }) => {
+      if (!user) throw new Error("User not authenticated");
+      
+      // Create order
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          user_id: user.id,
+          total: calculateTotal(),
+          payment_id: paymentId,
+          status: 'processing'
+        }])
+        .select()
+        .single();
+      
+      if (orderError) throw orderError;
+      
+      // Create order items
+      const orderItems = cart.map(item => ({
+        order_id: order.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.discount 
+          ? Math.round(item.price * (1 - item.discount / 100))
+          : item.price
+      }));
+      
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+      
+      if (itemsError) throw itemsError;
+      
+      return order;
+    },
+    onSuccess: () => {
+      // Clear cart
+      updateCart([]);
+      
+      // Show success message
+      toast({
+        title: "Order completed",
+        description: "Your order has been placed successfully!",
+      });
+      
+      // Redirect to home
+      navigate('/');
+    },
+    onError: (error) => {
+      console.error("Error creating order:", error);
+      
+      toast({
+        variant: "destructive",
+        title: "Error creating order",
+        description: "There was a problem creating your order. Please try again.",
+      });
     }
+  });
 
-    // Simulate promo code check
-    if (promoCode.toLowerCase() === "discount10") {
-      toast.success("Promo code applied: 10% discount");
-    } else {
-      toast.error("Invalid promo code");
-    }
+  const handlePaymentSuccess = (paymentId: string) => {
+    createOrderMutation.mutate({ paymentId });
   };
 
-  const handleCheckout = () => {
-    // In a real app, this would navigate to a checkout page
-    // or open a payment gateway modal
-    toast.success("Proceeding to checkout");
-    navigate("/checkout");
-  };
-
-  // Calculate cart totals
-  const subtotal = cartItems.reduce((sum, item) => {
-    const itemPrice = item.discount ? 
-      item.price - (item.price * item.discount / 100) : 
-      item.price;
-    return sum + (itemPrice * item.quantity);
-  }, 0);
-  
-  const formattedPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
+  // If cart is empty
+  if (cart.length === 0) {
+    return (
+      <div className="container py-16 text-center">
+        <h1 className="text-3xl font-bold mb-6">Your Cart</h1>
+        <p className="text-muted-foreground mb-8">Your cart is empty</p>
+        <Button onClick={() => navigate('/')}>Continue Shopping</Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="container py-8">
-      <h1 className="text-2xl font-bold mb-6 flex items-center">
-        <ShoppingCart className="mr-2" />
-        Your Shopping Cart
-      </h1>
-
-      {loading ? (
-        <div className="text-center py-12">
-          <p>Loading your cart...</p>
-        </div>
-      ) : cartItems.length === 0 ? (
-        <div className="text-center py-12">
-          <h2 className="text-xl font-medium mb-4">Your cart is empty</h2>
-          <p className="text-muted-foreground mb-6">
-            Looks like you haven't added any vouchers to your cart yet.
-          </p>
-          <Button asChild>
-            <Link to="/products">Browse Vouchers</Link>
-          </Button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <div className="space-y-4">
-              {cartItems.map((item) => {
-                const itemPrice = item.discount ? 
-                  item.price - (item.price * item.discount / 100) : 
-                  item.price;
-                const totalPrice = itemPrice * item.quantity;
-                
-                return (
-                  <Card key={item.id}>
-                    <CardContent className="p-4 flex">
-                      <div className="w-24 h-24 rounded overflow-hidden shrink-0">
-                        <img 
-                          src={item.image} 
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      
-                      <div className="ml-4 flex-1">
-                        <div className="flex justify-between">
-                          <div>
-                            <h3 className="font-medium">{item.name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {item.category} | {item.duration}
-                            </p>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => removeItem(item.id)}
-                            className="h-8 w-8"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        
-                        <div className="mt-2 flex items-center justify-between">
-                          <div className="flex items-center">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            >
-                              -
-                            </Button>
-                            <span className="w-12 text-center">{item.quantity}</span>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            >
-                              +
-                            </Button>
-                          </div>
-                          
-                          <div className="text-right">
-                            {item.discount ? (
-                              <div>
-                                <span className="font-medium">{formattedPrice(totalPrice)}</span>
-                                <div className="text-xs text-muted-foreground">
-                                  <span className="line-through">{formattedPrice(item.price)}</span>
-                                  <span className="text-brand-pink ml-1">-{item.discount}%</span>
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="font-medium">{formattedPrice(totalPrice)}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+    <div className="container py-16">
+      <h1 className="text-3xl font-bold mb-8">Your Cart</h1>
+      
+      {isCheckingOut ? (
+        <div className="grid md:grid-cols-2 gap-8">
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+            <Table>
+              <TableBody>
+                {cart.map((item) => {
+                  const discountedPrice = item.discount 
+                    ? Math.round(item.price * (1 - item.discount / 100))
+                    : item.price;
+                    
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell>
+                        {item.quantity} &times; {discountedPrice.toLocaleString('id-ID', {
+                          style: 'currency',
+                          currency: 'IDR',
+                          minimumFractionDigits: 0,
+                        })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {(discountedPrice * item.quantity).toLocaleString('id-ID', {
+                          style: 'currency',
+                          currency: 'IDR',
+                          minimumFractionDigits: 0,
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                <TableRow>
+                  <TableCell colSpan={2} className="font-semibold">Total</TableCell>
+                  <TableCell className="text-right font-semibold">
+                    {calculateTotal().toLocaleString('id-ID', {
+                      style: 'currency',
+                      currency: 'IDR',
+                      minimumFractionDigits: 0,
+                    })}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+            
+            <div className="mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsCheckingOut(false)}
+              >
+                Back to Cart
+              </Button>
             </div>
           </div>
           
           <div>
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-medium text-lg mb-4">Order Summary</h3>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>{formattedPrice(subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Transaction Fee</span>
-                    <span>{formattedPrice(2000)}</span>
-                  </div>
-                </div>
-                
-                <Separator className="my-4" />
-                
-                <div className="flex justify-between font-medium">
-                  <span>Total</span>
-                  <span>{formattedPrice(subtotal + 2000)}</span>
-                </div>
-                
-                <div className="mt-6 space-y-4">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Promo code"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value)}
-                    />
-                    <Button onClick={applyPromoCode} variant="outline">Apply</Button>
-                  </div>
-                  
-                  <Button 
-                    className="w-full"
-                    onClick={handleCheckout}
-                  >
-                    Checkout
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  
-                  <Button 
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => navigate("/")}
-                  >
-                    Continue Shopping
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <PaymentForm 
+              items={cart} 
+              total={calculateTotal()}
+              onSuccess={handlePaymentSuccess}
+            />
           </div>
         </div>
+      ) : (
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Product</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Quantity</TableHead>
+                <TableHead>Subtotal</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cart.map((item) => {
+                const discountedPrice = item.discount 
+                  ? Math.round(item.price * (1 - item.discount / 100))
+                  : item.price;
+                  
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell>{item.duration}</TableCell>
+                    <TableCell>
+                      {discountedPrice.toLocaleString('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                        minimumFractionDigits: 0,
+                      })}
+                      
+                      {item.discount > 0 && (
+                        <div className="text-xs text-muted-foreground line-through">
+                          {item.price.toLocaleString('id-ID', {
+                            style: 'currency',
+                            currency: 'IDR',
+                            minimumFractionDigits: 0,
+                          })}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        >
+                          -
+                        </Button>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 1)}
+                          className="w-14 h-8 mx-2 text-center"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        >
+                          +
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {(discountedPrice * item.quantity).toLocaleString('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                        minimumFractionDigits: 0,
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeItem(item.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+            <TableCaption className="mt-2">
+              <div className="flex justify-end">
+                <div className="w-72">
+                  <div className="flex justify-between py-2">
+                    <span>Total</span>
+                    <span className="font-semibold">
+                      {calculateTotal().toLocaleString('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                        minimumFractionDigits: 0,
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </TableCaption>
+          </Table>
+          
+          <div className="flex justify-between mt-8">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+            >
+              Continue Shopping
+            </Button>
+            
+            <Button 
+              onClick={() => {
+                if (!user) {
+                  toast({
+                    title: "Please log in",
+                    description: "You need to be logged in to checkout.",
+                  });
+                  navigate('/login');
+                  return;
+                }
+                setIsCheckingOut(true);
+              }}
+            >
+              Proceed to Checkout
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );
