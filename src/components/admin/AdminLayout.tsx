@@ -1,4 +1,3 @@
-
 import { useContext, useEffect } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '@/components/layout/Layout';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { 
   LayoutDashboard, 
   Package, 
-  Category, 
+  FolderIcon, 
   ShoppingCart, 
   Users, 
   LogOut, 
@@ -74,7 +73,7 @@ const AdminLayout = () => {
                 to="/admin/categories" 
                 className="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100"
               >
-                <Category className="mr-3 h-5 w-5" />
+                <FolderIcon className="mr-3 h-5 w-5" />
                 Categories
               </Link>
             </li>

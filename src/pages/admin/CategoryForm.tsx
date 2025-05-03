@@ -86,7 +86,11 @@ const AdminCategoryForm = () => {
       if (isEditing) {
         const { error } = await supabase
           .from('categories')
-          .update(values)
+          .update({
+            name: values.name,
+            slug: values.slug,
+            image: values.image
+          })
           .eq('id', id);
         
         if (error) throw error;
@@ -94,7 +98,11 @@ const AdminCategoryForm = () => {
       } else {
         const { data, error } = await supabase
           .from('categories')
-          .insert([values])
+          .insert({
+            name: values.name,
+            slug: values.slug,
+            image: values.image
+          })
           .select();
         
         if (error) throw error;

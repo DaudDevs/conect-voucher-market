@@ -113,7 +113,16 @@ const AdminProductForm = () => {
       if (isEditing) {
         const { error } = await supabase
           .from('products')
-          .update(values)
+          .update({
+            name: values.name,
+            price: values.price,
+            description: values.description,
+            category_id: values.category_id,
+            duration: values.duration,
+            is_popular: values.is_popular,
+            discount: values.discount,
+            image: values.image
+          })
           .eq('id', id);
         
         if (error) throw error;
@@ -121,7 +130,16 @@ const AdminProductForm = () => {
       } else {
         const { data, error } = await supabase
           .from('products')
-          .insert([values])
+          .insert({
+            name: values.name,
+            price: values.price,
+            description: values.description,
+            category_id: values.category_id,
+            duration: values.duration,
+            is_popular: values.is_popular,
+            discount: values.discount,
+            image: values.image
+          })
           .select();
         
         if (error) throw error;
