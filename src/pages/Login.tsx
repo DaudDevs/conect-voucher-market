@@ -1,17 +1,27 @@
 
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useContext } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { AuthContext } from "@/components/layout/Layout";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useContext(AuthContext);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Redirect if already logged in
+  if (user) {
+    const from = location.state?.from?.pathname || "/";
+    navigate(from, { replace: true });
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,12 +33,26 @@ const Login = () => {
     
     setLoading(true);
     
-    // Simulate login - replace with Supabase auth
-    setTimeout(() => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        throw error;
+      }
+
       toast.success("Logged in successfully");
+      
+      // Redirect to previous location or home page
+      const from = location.state?.from?.pathname || "/";
+      navigate(from, { replace: true });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to login");
+    } finally {
       setLoading(false);
-      navigate("/");
-    }, 1500);
+    }
   };
 
   return (

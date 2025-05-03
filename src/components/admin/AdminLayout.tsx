@@ -1,3 +1,4 @@
+
 import { useContext, useEffect } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '@/components/layout/Layout';
@@ -11,7 +12,7 @@ import {
   LogOut, 
   Home
 } from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 const AdminLayout = () => {
   const { user, profile, loading, signOut } = useContext(AuthContext);
@@ -19,12 +20,10 @@ const AdminLayout = () => {
 
   useEffect(() => {
     if (!loading && (!user || profile?.role !== 'admin')) {
-      toast({
-        variant: "destructive",
-        title: "Access Denied",
+      toast.error("Access Denied", {
         description: "You don't have permission to access the admin area.",
       });
-      navigate('/');
+      navigate('/login', { state: { from: { pathname: '/admin' } } });
     }
   }, [user, profile, loading, navigate]);
 

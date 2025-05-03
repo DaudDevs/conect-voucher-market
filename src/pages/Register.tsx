@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -30,12 +31,33 @@ const Register = () => {
     
     setLoading(true);
     
-    // Simulate registration - replace with Supabase auth
-    setTimeout(() => {
-      toast.success("Account created successfully");
-      setLoading(false);
+    try {
+      // Split full name into first and last name
+      const nameParts = fullName.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      // Register with Supabase Auth
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+          },
+        },
+      });
+      
+      if (error) throw error;
+      
+      toast.success("Account created successfully. Please check your email for verification.");
       navigate("/login");
-    }, 1500);
+    } catch (error: any) {
+      toast.error(error.message || "Registration failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
