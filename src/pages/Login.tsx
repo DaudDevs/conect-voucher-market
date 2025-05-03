@@ -1,5 +1,4 @@
-
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,16 +11,26 @@ import { AuthContext } from "@/components/layout/Layout";
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useContext(AuthContext);
+  const { user, profile } = useContext(AuthContext);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Get the intended destination if redirected from a protected route
+  const from = location.state?.from?.pathname || "/";
+
   // Redirect if already logged in
-  if (user) {
-    const from = location.state?.from?.pathname || "/";
-    navigate(from, { replace: true });
-  }
+  useEffect(() => {
+    if (user) {
+      // If user is an admin and was trying to access admin area, send them to admin dashboard
+      if (profile?.role === 'admin' && from.startsWith('/admin')) {
+        navigate('/admin', { replace: true });
+      } else {
+        // Otherwise send them to their requested page or home
+        navigate(from, { replace: true });
+      }
+    }
+  }, [user, profile, from, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,15 +54,37 @@ const Login = () => {
 
       toast.success("Logged in successfully");
       
-      // Redirect to previous location or home page
-      const from = location.state?.from?.pathname || "/";
-      navigate(from, { replace: true });
+      // The redirect will happen in useEffect when user state updates
     } catch (error: any) {
       toast.error(error.message || "Failed to login");
     } finally {
       setLoading(false);
     }
   };
+
+  // If already logged in, don't render the form
+  if (user) {
+    return (
+      <div className="container max-w-md py-16">
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl text-center">Already logged in</CardTitle>
+            <CardDescription className="text-center">
+              You are currently signed in as {email || user.email}
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="flex flex-col">
+            <Button 
+              onClick={() => navigate(from)} 
+              className="w-full"
+            >
+              Continue
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-md py-16">

@@ -1,16 +1,33 @@
 
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ShoppingCart, User, Search, LogOut } from "lucide-react";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { AuthContext } from "@/components/layout/Layout";
+import { toast } from "sonner";
 
 const Navbar = () => {
+  const navigate = useNavigate();
   const { user, profile, signOut } = useContext(AuthContext);
+  const [searchTerm, setSearchTerm] = useState("");
   
-  const handleSignOut = () => {
-    signOut();
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Successfully logged out");
+      navigate('/');
+    } catch (error) {
+      toast.error("Failed to log out");
+      console.error(error);
+    }
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
   };
 
   return (
@@ -24,14 +41,16 @@ const Navbar = () => {
           </Link>
         </div>
         
-        <div className="hidden md:flex relative max-w-sm w-full">
+        <form onSubmit={handleSearch} className="hidden md:flex relative max-w-sm w-full">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
             type="search" 
             placeholder="Search vouchers..." 
             className="w-full rounded-full pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
-        </div>
+        </form>
         
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
