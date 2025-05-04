@@ -22,6 +22,7 @@ import AdminOrders from "./pages/admin/Orders";
 import AdminCustomers from "./pages/admin/Customers";
 import AdminProductForm from "./pages/admin/ProductForm";
 import AdminCategoryForm from "./pages/admin/CategoryForm";
+import CrudManager from "./pages/admin/CrudManager";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +61,7 @@ const App = () => (
             <Route path="categories/:id" element={<AdminCategoryForm />} />
             <Route path="orders" element={<AdminOrders />} />
             <Route path="customers" element={<AdminCustomers />} />
+            <Route path="crud" element={<CrudManager />} />
           </Route>
         </Routes>
       </BrowserRouter>
