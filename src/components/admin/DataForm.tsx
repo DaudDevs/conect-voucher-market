@@ -33,7 +33,15 @@ interface DataFormProps {
   onSuccess: () => void;
 }
 
+// Define allowed table names to satisfy TypeScript
+type TableName = 'categories' | 'products' | 'profiles' | 'orders' | 'order_items';
+
 export function DataForm({ tableName, initialData, isEditing = false, onSuccess }: DataFormProps) {
+  // Type guard to ensure tableName is one of the allowed values
+  const isValidTable = (name: string): name is TableName => {
+    return ['categories', 'products', 'profiles', 'orders', 'order_items'].includes(name);
+  };
+  
   // Get table schema to generate form fields dynamically
   const { data: tableSchema } = useQuery({
     queryKey: ['table-schema', tableName],
@@ -48,8 +56,8 @@ export function DataForm({ tableName, initialData, isEditing = false, onSuccess 
           // Skip certain system fields
           if (['id', 'created_at', 'updated_at'].includes(key)) return schema;
           
-          const type = typeof value;
-          schema[key] = { type };
+          const fieldType = typeof value;
+          schema[key] = { type: fieldType };
           return schema;
         }, {});
       }
@@ -89,8 +97,11 @@ export function DataForm({ tableName, initialData, isEditing = false, onSuccess 
   const { data: categories } = useQuery({
     queryKey: ['categories-for-select'],
     queryFn: async () => {
-      const { data } = await supabase.from('categories').select('id, name');
-      return data || [];
+      if (isValidTable('categories')) {
+        const { data } = await supabase.from('categories').select('id, name');
+        return data || [];
+      }
+      return [];
     },
     enabled: tableName === 'products',
   });
@@ -142,6 +153,10 @@ export function DataForm({ tableName, initialData, isEditing = false, onSuccess 
   // Form submission handler
   const mutation = useMutation({
     mutationFn: async (values: any) => {
+      if (!isValidTable(tableName)) {
+        throw new Error(`Invalid table name: ${tableName}`);
+      }
+
       if (isEditing && initialData?.id) {
         // Update existing record
         const { error } = await supabase
@@ -181,7 +196,7 @@ export function DataForm({ tableName, initialData, isEditing = false, onSuccess 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {Object.entries(tableSchema).map(([key, field]: [string, any]) => (
+        {Object.entries(tableSchema).map(([key, fieldConfig]: [string, any]) => (
           <FormField
             key={key}
             control={form.control}
@@ -251,7 +266,7 @@ export function DataForm({ tableName, initialData, isEditing = false, onSuccess 
                           </SelectContent>
                         </Select>
                       );
-                    } else if (field.type === 'boolean') {
+                    } else if (fieldConfig.type === 'boolean') {
                       // Boolean checkbox
                       return (
                         <div className="flex items-center space-x-2">
@@ -271,7 +286,7 @@ export function DataForm({ tableName, initialData, isEditing = false, onSuccess 
                           rows={4}
                         />
                       );
-                    } else if (field.type === 'number') {
+                    } else if (fieldConfig.type === 'number') {
                       // Number input
                       return (
                         <Input

@@ -48,8 +48,11 @@ const AVAILABLE_TABLES = [
   { id: 'orders', name: 'Orders' },
 ];
 
+// Define allowed table names to satisfy TypeScript
+type TableName = 'categories' | 'products' | 'profiles' | 'orders' | 'order_items';
+
 const CrudManager = () => {
-  const [selectedTable, setSelectedTable] = useState<string>('products');
+  const [selectedTable, setSelectedTable] = useState<TableName>('products');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<boolean>(false);
@@ -130,7 +133,7 @@ const CrudManager = () => {
           <label className="text-sm font-medium">Select Table</label>
           <Select
             value={selectedTable} 
-            onValueChange={setSelectedTable}
+            onValueChange={(value: TableName) => setSelectedTable(value)}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select table" />
