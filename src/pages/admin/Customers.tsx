@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -54,19 +54,12 @@ const AdminCustomers = () => {
       return { id, role };
     },
     onSuccess: (data) => {
-      toast({
-        title: "Role updated",
-        description: `User role has been set to "${data.role}".`,
-      });
+      toast.success(`User role has been set to "${data.role}".`);
       refetch();
     },
     onError: (error) => {
       console.error('Error updating role:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to update user role.",
-      });
+      toast.error("Failed to update user role.");
     },
   });
 
