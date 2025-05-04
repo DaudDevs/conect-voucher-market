@@ -148,9 +148,8 @@ const AdminCustomers = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        toast({
-                          title: "Feature coming soon",
-                          description: "Customer detail view will be available soon.",
+                        toast.info("Feature coming soon", {
+                          description: "Customer detail view will be available soon."
                         });
                       }}
                     >
