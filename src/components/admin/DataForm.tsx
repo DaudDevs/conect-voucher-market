@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -25,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { TableName, isValidTable } from './TableUtils';
 
 interface DataFormProps {
   tableName: string;
@@ -33,15 +33,7 @@ interface DataFormProps {
   onSuccess: () => void;
 }
 
-// Define allowed table names to satisfy TypeScript
-type TableName = 'categories' | 'products' | 'profiles' | 'orders' | 'order_items';
-
 export function DataForm({ tableName, initialData, isEditing = false, onSuccess }: DataFormProps) {
-  // Type guard to ensure tableName is one of the allowed values
-  const isValidTable = (name: string): name is TableName => {
-    return ['categories', 'products', 'profiles', 'orders', 'order_items'].includes(name);
-  };
-  
   // Get table schema to generate form fields dynamically
   const { data: tableSchema } = useQuery({
     queryKey: ['table-schema', tableName],
