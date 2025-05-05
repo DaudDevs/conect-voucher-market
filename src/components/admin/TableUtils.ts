@@ -3,10 +3,10 @@
 export type TableName = 'categories' | 'products' | 'profiles' | 'orders' | 'order_items';
 
 export const AVAILABLE_TABLES = [
-  { id: 'products', name: 'Products' },
-  { id: 'categories', name: 'Categories' },
-  { id: 'profiles', name: 'User Profiles' },
-  { id: 'orders', name: 'Orders' },
+  { id: 'products' as TableName, name: 'Products' },
+  { id: 'categories' as TableName, name: 'Categories' },
+  { id: 'profiles' as TableName, name: 'User Profiles' },
+  { id: 'orders' as TableName, name: 'Orders' },
 ];
 
 // Type guard to ensure tableName is one of the allowed values

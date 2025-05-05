@@ -1,11 +1,12 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TableName } from "./TableUtils";
 
 interface ViewItemDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   item: any;
-  tableName: string;
+  tableName: TableName;
 }
 
 export function ViewItemDialog({ isOpen, onOpenChange, item, tableName }: ViewItemDialogProps) {

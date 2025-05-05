@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -27,10 +28,19 @@ import { toast } from 'sonner';
 import { TableName, isValidTable } from './TableUtils';
 
 interface DataFormProps {
-  tableName: string;
+  tableName: TableName;
   initialData?: any;
   isEditing?: boolean;
   onSuccess: () => void;
+}
+
+interface FieldConfig {
+  type: string;
+  required?: boolean;
+}
+
+interface TableSchema {
+  [key: string]: FieldConfig;
 }
 
 export function DataForm({ tableName, initialData, isEditing = false, onSuccess }: DataFormProps) {
@@ -44,14 +54,14 @@ export function DataForm({ tableName, initialData, isEditing = false, onSuccess 
       // For now, let's just infer the schema based on available data or provide defaults
       if (initialData) {
         // Infer from existing data
-        return Object.entries(initialData).reduce((schema: any, [key, value]) => {
+        return Object.entries(initialData).reduce((schema: TableSchema, [key, value]) => {
           // Skip certain system fields
           if (['id', 'created_at', 'updated_at'].includes(key)) return schema;
           
           const fieldType = typeof value;
           schema[key] = { type: fieldType };
           return schema;
-        }, {});
+        }, {} as TableSchema);
       }
       
       // Provide default schema based on table name
@@ -66,21 +76,21 @@ export function DataForm({ tableName, initialData, isEditing = false, onSuccess 
             is_popular: { type: 'boolean' },
             discount: { type: 'number' },
             image: { type: 'string' }
-          };
+          } as TableSchema;
         case 'categories':
           return {
             name: { type: 'string', required: true },
             slug: { type: 'string', required: true },
             image: { type: 'string' }
-          };
+          } as TableSchema;
         case 'profiles':
           return {
             first_name: { type: 'string' },
             last_name: { type: 'string' },
             role: { type: 'string', required: true }
-          };
+          } as TableSchema;
         default:
-          return {};
+          return {} as TableSchema;
       }
     },
   });
@@ -89,7 +99,7 @@ export function DataForm({ tableName, initialData, isEditing = false, onSuccess 
   const { data: categories } = useQuery({
     queryKey: ['categories-for-select'],
     queryFn: async () => {
-      if (isValidTable('categories')) {
+      if (tableName === 'products') {
         const { data } = await supabase.from('categories').select('id, name');
         return data || [];
       }
@@ -104,7 +114,7 @@ export function DataForm({ tableName, initialData, isEditing = false, onSuccess 
     
     const schemaObj: any = {};
     
-    Object.entries(tableSchema).forEach(([key, field]: [string, any]) => {
+    Object.entries(tableSchema).forEach(([key, field]: [string, FieldConfig]) => {
       let fieldSchema;
       
       if (field.type === 'string') {
@@ -188,7 +198,7 @@ export function DataForm({ tableName, initialData, isEditing = false, onSuccess 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {Object.entries(tableSchema).map(([key, fieldConfig]: [string, any]) => (
+        {Object.entries(tableSchema).map(([key, fieldConfig]: [string, FieldConfig]) => (
           <FormField
             key={key}
             control={form.control}
