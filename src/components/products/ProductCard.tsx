@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { ShoppingCart } from "lucide-react";
+import { toast } from "sonner";
 
 interface ProductCardProps {
   id: string;
@@ -39,6 +40,39 @@ const ProductCard = ({
     currency: 'IDR',
     minimumFractionDigits: 0,
   }).format(price - (price * discount / 100)) : null;
+
+  const handleAddToCart = () => {
+    // Get existing cart from localStorage
+    const existingCart = localStorage.getItem("cart");
+    let cart = existingCart ? JSON.parse(existingCart) : [];
+    
+    // Check if product is already in cart
+    const existingProductIndex = cart.findIndex((item: any) => item.id === id);
+    
+    if (existingProductIndex >= 0) {
+      // Update quantity if product already exists
+      cart[existingProductIndex].quantity += 1;
+    } else {
+      // Add new product to cart with quantity 1
+      cart.push({
+        id,
+        name,
+        price,
+        description,
+        category,
+        image,
+        duration,
+        isPopular,
+        discount,
+        quantity: 1
+      });
+    }
+    
+    // Save updated cart to localStorage
+    localStorage.setItem("cart", JSON.stringify(cart));
+    
+    toast.success(`Added ${name} to cart`);
+  };
 
   return (
     <Card className="overflow-hidden h-full transition-all duration-200 hover:shadow-md">
@@ -85,7 +119,7 @@ const ProductCard = ({
         <Button variant="outline" size="sm" className="w-full" asChild>
           <Link to={`/product/${id}`}>Details</Link>
         </Button>
-        <Button size="sm" className="w-full">
+        <Button size="sm" className="w-full" onClick={handleAddToCart}>
           <ShoppingCart className="mr-2 h-4 w-4" />
           Add to Cart
         </Button>

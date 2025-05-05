@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -98,16 +97,38 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (product) {
+      // Get existing cart from localStorage
+      const existingCart = localStorage.getItem("cart");
+      let cart = existingCart ? JSON.parse(existingCart) : [];
+      
+      // Check if product is already in cart
+      const existingProductIndex = cart.findIndex((item: Product & { quantity: number }) => item.id === product.id);
+      
+      if (existingProductIndex >= 0) {
+        // Update quantity if product already exists
+        cart[existingProductIndex].quantity += quantity;
+      } else {
+        // Add new product to cart
+        cart.push({
+          ...product,
+          quantity: quantity
+        });
+      }
+      
+      // Save updated cart to localStorage
+      localStorage.setItem("cart", JSON.stringify(cart));
+      
       toast.success(`Added ${quantity} ${product.name} voucher(s) to cart`);
-      // In a real app, this would add to a cart state or context
     }
   };
 
   const handleBuyNow = () => {
     if (product) {
+      // Add to cart first
+      handleAddToCart();
+      // Then navigate to checkout
       toast.success(`Proceeding to checkout for ${product.name}`);
-      // In a real app, this would redirect to checkout with this product
-      navigate("/checkout");
+      navigate("/cart");
     }
   };
 
@@ -158,7 +179,7 @@ const ProductDetail = () => {
     );
   }
 
-  const discountedPrice = product.discount 
+  const discountedPrice = product?.discount 
     ? product.price - (product.price * product.discount / 100)
     : null;
 
@@ -168,8 +189,8 @@ const ProductDetail = () => {
         <div className="w-full lg:w-2/5">
           <Card className="mb-4 overflow-hidden">
             <img
-              src={product.image}
-              alt={product.name}
+              src={product?.image}
+              alt={product?.name}
               className="aspect-square w-full object-cover"
             />
           </Card>
@@ -177,27 +198,27 @@ const ProductDetail = () => {
         
         <div className="w-full lg:w-3/5">
           <div className="flex items-center gap-2 mb-1">
-            <Badge variant="outline">{product.category}</Badge>
-            {product.isPopular && <Badge className="bg-brand-orange">Popular</Badge>}
-            {product.discount && <Badge className="bg-brand-pink">{product.discount}% OFF</Badge>}
+            <Badge variant="outline">{product?.category}</Badge>
+            {product?.isPopular && <Badge className="bg-brand-orange">Popular</Badge>}
+            {product?.discount && <Badge className="bg-brand-pink">{product.discount}% OFF</Badge>}
           </div>
           
-          <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
+          <h1 className="text-3xl font-bold mb-2">{product?.name}</h1>
           
           <div className="flex items-baseline gap-2 mb-4">
             {discountedPrice ? (
               <>
                 <span className="text-2xl font-bold">{formattedPrice(discountedPrice)}</span>
-                <span className="text-muted-foreground line-through">{formattedPrice(product.price)}</span>
+                <span className="text-muted-foreground line-through">{formattedPrice(product?.price || 0)}</span>
               </>
             ) : (
-              <span className="text-2xl font-bold">{formattedPrice(product.price)}</span>
+              <span className="text-2xl font-bold">{formattedPrice(product?.price || 0)}</span>
             )}
-            <Badge variant="outline" className="ml-2">{product.duration}</Badge>
+            <Badge variant="outline" className="ml-2">{product?.duration}</Badge>
           </div>
           
           <p className="text-muted-foreground mb-6">
-            {product.longDescription || product.description}
+            {product?.longDescription || product?.description}
           </p>
           
           <div className="flex flex-wrap gap-4 mb-6">
@@ -242,7 +263,7 @@ const ProductDetail = () => {
               <TabsTrigger value="how-to-use">How to Use</TabsTrigger>
             </TabsList>
             <TabsContent value="features" className="pt-4">
-              {product.features ? (
+              {product?.features ? (
                 <ul className="space-y-2 list-disc pl-5">
                   {product.features.map((feature, index) => (
                     <li key={index}>{feature}</li>
@@ -253,7 +274,7 @@ const ProductDetail = () => {
               )}
             </TabsContent>
             <TabsContent value="how-to-use" className="pt-4">
-              {product.howToUse ? (
+              {product?.howToUse ? (
                 <ol className="space-y-2 list-decimal pl-5">
                   {product.howToUse.map((step, index) => (
                     <li key={index}>{step}</li>
