@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trash2 } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import PaymentForm from "@/components/checkout/PaymentForm";
 import { useMutation } from "@tanstack/react-query";
 
@@ -57,10 +56,7 @@ const Cart = () => {
     const newCart = cart.filter((item) => item.id !== productId);
     updateCart(newCart);
     
-    toast({
-      title: "Item removed",
-      description: "The item has been removed from your cart.",
-    });
+    toast.success("Item removed from cart");
   };
 
   const calculateTotal = () => {
@@ -76,47 +72,49 @@ const Cart = () => {
     mutationFn: async ({ paymentId }: { paymentId: string }) => {
       if (!user) throw new Error("User not authenticated");
       
-      // Create order
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          user_id: user.id,
-          total: calculateTotal(),
-          payment_id: paymentId,
-          status: 'processing'
-        }])
-        .select()
-        .single();
-      
-      if (orderError) throw orderError;
-      
-      // Create order items
-      const orderItems = cart.map(item => ({
-        order_id: order.id,
-        product_id: item.id,
-        quantity: item.quantity,
-        price: item.discount 
-          ? Math.round(item.price * (1 - item.discount / 100))
-          : item.price
-      }));
-      
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-      
-      if (itemsError) throw itemsError;
-      
-      return order;
+      try {
+        // Create order without referencing profiles
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .insert([{
+            user_id: user.id,
+            total: calculateTotal(),
+            payment_id: paymentId,
+            status: 'processing'
+          }])
+          .select('id')
+          .single();
+        
+        if (orderError) throw orderError;
+        
+        // Create order items
+        const orderItems = cart.map(item => ({
+          order_id: order.id,
+          product_id: item.id,
+          quantity: item.quantity,
+          price: item.discount 
+            ? Math.round(item.price * (1 - item.discount / 100))
+            : item.price
+        }));
+        
+        const { error: itemsError } = await supabase
+          .from('order_items')
+          .insert(orderItems);
+        
+        if (itemsError) throw itemsError;
+        
+        return order;
+      } catch (error) {
+        console.error("Error creating order:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       // Clear cart
       updateCart([]);
       
       // Show success message
-      toast({
-        title: "Order completed",
-        description: "Your order has been placed successfully!",
-      });
+      toast.success("Order placed successfully!");
       
       // Redirect to home
       navigate('/');
@@ -124,11 +122,7 @@ const Cart = () => {
     onError: (error) => {
       console.error("Error creating order:", error);
       
-      toast({
-        variant: "destructive",
-        title: "Error creating order",
-        description: "There was a problem creating your order. Please try again.",
-      });
+      toast.error("Failed to create order. Please try again.");
     }
   });
 
