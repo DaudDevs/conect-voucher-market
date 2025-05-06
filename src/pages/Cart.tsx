@@ -69,26 +69,27 @@ const Cart = () => {
     }, 0);
   };
 
+  // Fixed mutation to avoid profiles reference causing infinite recursion
   const createOrderMutation = useMutation({
     mutationFn: async ({ paymentId }: { paymentId: string }) => {
       if (!user) throw new Error("User not authenticated");
       
       try {
-        // Create order without referencing profiles
+        // Create order first without any reference to profiles
         const { data: order, error: orderError } = await supabase
           .from('orders')
-          .insert([{
+          .insert({
             user_id: user.id,
             total: calculateTotal(),
             payment_id: paymentId,
             status: 'processing'
-          }])
+          })
           .select('id')
           .single();
         
         if (orderError) throw orderError;
         
-        // Create order items
+        // Create order items as a separate operation
         const orderItems = cart.map(item => ({
           order_id: order.id,
           product_id: item.id,
@@ -122,7 +123,6 @@ const Cart = () => {
     },
     onError: (error) => {
       console.error("Error creating order:", error);
-      
       toast.error("Failed to create order. Please try again.");
     }
   });

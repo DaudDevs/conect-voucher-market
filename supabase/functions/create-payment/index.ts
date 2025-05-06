@@ -23,32 +23,31 @@ serve(async (req) => {
     }
 
     // This is a simulated payment process
-    // In a real implementation, you would integrate with a payment provider like Stripe, Midtrans, etc.
+    // In a real implementation, you would integrate with a payment provider like Midtrans or Xendit
     
     // Calculate total
-    const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const total = items.reduce((sum, item) => {
+      const price = item.discount 
+        ? item.price * (1 - item.discount / 100) 
+        : item.price;
+      return sum + (price * item.quantity);
+    }, 0);
     
     // Simulate payment processing
     const paymentId = crypto.randomUUID();
-    const success = Math.random() > 0.1; // 90% success rate for simulation
     
-    if (!success) {
-      return new Response(
-        JSON.stringify({ 
-          success: false,
-          message: "Payment processing failed. Please try again." 
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Generate a simulated QR code URL
+    // In a real implementation, this would come from your payment provider's API
+    const qrisUrl = "https://cdn.worldvectorlogo.com/logos/qris-1.svg";
     
-    // Return successful payment response
+    // Return successful payment response with QRIS URL
     return new Response(
       JSON.stringify({
         success: true,
         paymentId,
         total,
-        message: "Payment processed successfully",
+        qrisUrl,
+        message: "QRIS code generated successfully",
         timestamp: new Date().toISOString()
       }),
       { 

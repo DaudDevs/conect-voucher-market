@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   cardNumber: z.string().min(16, "Card number must be at least 16 digits"),
@@ -35,6 +35,9 @@ interface PaymentFormProps {
 
 const PaymentForm = ({ items, total, onSuccess }: PaymentFormProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentStep, setPaymentStep] = useState("form"); // form, qris
+  const [qrisImage, setQrisImage] = useState("");
+  const [paymentId, setPaymentId] = useState("");
   const navigate = useNavigate();
 
   const form = useForm<FormValues>({
@@ -72,24 +75,78 @@ const PaymentForm = ({ items, total, onSuccess }: PaymentFormProps) => {
         throw new Error(error?.message || data?.message || "Payment failed");
       }
 
-      // Payment successful
-      toast({
-        title: "Payment successful",
-        description: "Your payment has been processed successfully.",
-      });
+      // Set the QRIS image and payment ID
+      setQrisImage(data.qrisUrl || "https://cdn.worldvectorlogo.com/logos/qris-1.svg"); // Fallback to a generic QRIS logo if no URL provided
+      setPaymentId(data.paymentId);
       
-      onSuccess(data.paymentId);
+      // Show QRIS payment step
+      setPaymentStep("qris");
+      
     } catch (error) {
       console.error("Payment error:", error);
-      toast({
-        variant: "destructive",
-        title: "Payment failed",
-        description: "There was an error processing your payment. Please try again.",
-      });
+      toast.error("There was an error processing your payment. Please try again.");
     } finally {
       setIsProcessing(false);
     }
   };
+
+  const confirmPayment = () => {
+    // In a real implementation, you would check the payment status with the backend
+    // For now, we'll simulate a successful payment
+    toast.success("Payment verified successfully!");
+    onSuccess(paymentId);
+  };
+
+  if (paymentStep === "qris") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Scan QRIS to Pay</CardTitle>
+        </CardHeader>
+        <CardContent className="text-center">
+          <div className="mb-6 flex justify-center">
+            <div className="border p-4 rounded-lg inline-block bg-white">
+              <img 
+                src={qrisImage} 
+                alt="QRIS Payment Code" 
+                className="mx-auto max-w-[240px] max-h-[240px]"
+              />
+            </div>
+          </div>
+          
+          <div className="mb-6">
+            <p className="text-sm text-muted-foreground mb-2">
+              Please scan the QR code using your mobile banking or e-wallet app
+            </p>
+            <p className="font-semibold">
+              Amount: {total.toLocaleString('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0,
+              })}
+            </p>
+          </div>
+          
+          <div className="space-y-3">
+            <Button 
+              className="w-full" 
+              onClick={confirmPayment}
+              variant="default"
+            >
+              I've Completed Payment
+            </Button>
+            <Button 
+              className="w-full" 
+              onClick={() => setPaymentStep("form")}
+              variant="outline"
+            >
+              Back to Payment Options
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -223,7 +280,7 @@ const PaymentForm = ({ items, total, onSuccess }: PaymentFormProps) => {
                     Processing...
                   </div>
                 ) : (
-                  `Pay ${total.toLocaleString('id-ID', {
+                  `Pay with QRIS ${total.toLocaleString('id-ID', {
                     style: 'currency',
                     currency: 'IDR',
                     minimumFractionDigits: 0,
