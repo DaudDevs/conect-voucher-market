@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -323,9 +324,8 @@ const Cart = () => {
             <Button 
               onClick={() => {
                 if (!user) {
-                  toast({
-                    title: "Please log in",
-                    description: "You need to be logged in to checkout.",
+                  toast("Please log in", {
+                    description: "You need to be logged in to checkout."
                   });
                   navigate('/login');
                   return;
