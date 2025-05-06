@@ -57,11 +57,7 @@ const PaymentForm = ({ items, total, onSuccess }: PaymentFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        toast({
-          variant: "destructive",
-          title: "Authentication required",
-          description: "Please log in to complete your purchase.",
-        });
+        toast.error("Authentication required. Please log in to complete your purchase.");
         navigate("/login");
         return;
       }
