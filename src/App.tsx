@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import Index from "./pages/Index";
 import CategoryPage from "./pages/CategoryPage";
@@ -63,6 +63,9 @@ const App = () => (
             <Route path="customers" element={<AdminCustomers />} />
             <Route path="crud" element={<CrudManager />} />
           </Route>
+          
+          {/* Redirect /crud to /admin/crud */}
+          <Route path="/crud" element={<Navigate to="/admin/crud" replace />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

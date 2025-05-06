@@ -13,6 +13,7 @@ interface QRISPaymentProps {
 
 const QRISPayment: React.FC<QRISPaymentProps> = ({
   qrisImage,
+  paymentId,
   total,
   onConfirmPayment,
   onBackToForm
@@ -44,6 +45,11 @@ const QRISPayment: React.FC<QRISPaymentProps> = ({
               minimumFractionDigits: 0,
             })}
           </p>
+          {paymentId && (
+            <p className="text-xs mt-1 text-muted-foreground">
+              Payment ID: {paymentId}
+            </p>
+          )}
         </div>
         
         <div className="space-y-3">
