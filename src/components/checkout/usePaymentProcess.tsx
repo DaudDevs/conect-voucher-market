@@ -69,54 +69,12 @@ export function usePaymentProcess({ items, total, onSuccess }: PaymentProcessPro
       setIsProcessing(true);
 
       // In a real system, you'd verify payment status with the payment provider
-      // For demo, we'll assume payment successful
       
-      // Get current user
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user) {
-        throw new Error("You must be logged in to confirm payment");
-      }
-      
-      // Create order with order items
-      const orderPayload = {
-        user_id: session.user.id,
-        total: total,
-        payment_id: paymentId,
-        status: "processing"
-      };
-      
-      // Insert order record
-      const { data: orderData, error: orderError } = await supabase
-        .from("orders")
-        .insert(orderPayload)
-        .select("id")
-        .single();
-        
-      if (orderError) {
-        console.error("Order creation error:", orderError);
-        throw new Error(`Failed to create order: ${orderError.message}`);
-      }
-
-      // Insert order items
-      const orderItems = items.map(item => ({
-        order_id: orderData.id,
-        product_id: item.id,
-        quantity: item.quantity,
-        price: item.price
-      }));
-      
-      const { error: orderItemsError } = await supabase
-        .from("order_items")
-        .insert(orderItems);
-        
-      if (orderItemsError) {
-        console.error("Error creating order items:", orderItemsError);
-        throw new Error(`Failed to create order items: ${orderItemsError.message}`);
-      }
-      
-      toast.success("Payment confirmed successfully!");
+      // Pass the payment ID to the success handler - let the parent component
+      // handle the order creation to avoid the profile recursion issue
       onSuccess(paymentId);
+      toast.success("Payment confirmed successfully!");
+      
     } catch (err: any) {
       console.error("Error confirming payment:", err);
       setError(err.message || "Failed to confirm payment");

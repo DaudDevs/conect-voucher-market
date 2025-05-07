@@ -22,7 +22,7 @@ const Cart = () => {
       if (!user) throw new Error("User not authenticated");
       
       try {
-        // Direct insert without profile reference to avoid recursion
+        // Create direct insert without querying profiles
         const { data: order, error: orderError } = await supabase
           .from('orders')
           .insert({
