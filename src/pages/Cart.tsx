@@ -22,7 +22,9 @@ const Cart = () => {
       if (!user) throw new Error("User not authenticated");
       
       try {
-        // Create direct insert without querying profiles
+        console.log("Creating order with payment ID:", paymentId);
+        
+        // Create order directly with minimal fields to avoid RLS recursion
         const { data: order, error: orderError } = await supabase
           .from('orders')
           .insert({
@@ -31,17 +33,22 @@ const Cart = () => {
             payment_id: paymentId,
             status: 'processing'
           })
-          .select('id')
-          .single();
+          .select('id');
         
         if (orderError) {
           console.error("Order creation error:", orderError);
           throw orderError;
         }
         
+        if (!order || order.length === 0) {
+          throw new Error("Failed to retrieve order ID after creation");
+        }
+        
+        const orderId = order[0].id;
+        
         // Create order items
         const orderItems = cart.map(item => ({
-          order_id: order.id,
+          order_id: orderId,
           product_id: item.id,
           quantity: item.quantity,
           price: item.discount 
@@ -58,7 +65,7 @@ const Cart = () => {
           throw itemsError;
         }
         
-        return order;
+        return { id: orderId };
       } catch (error) {
         console.error("Error creating order:", error);
         throw error;
